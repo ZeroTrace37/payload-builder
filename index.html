@@ -382,7 +382,7 @@ https://target.tld/api/v2/users?id=42</textarea>
   /* ---------- Payload Builder ---------- */
   /* Kanonische, öffentlich dokumentierte Test-Strings (PayloadsAllTheThings-Klasse).
      Zweck: autorisierte Assessments, CTFs, Labs, WAF-/Filter-Verifikation.
-     Hinweis: </script> in JS-Strings als <\/script> escaped, sonst bricht der HTML-Parser. */
+     Hinweis: schliessende Script-Tags in JS-Strings als <\/script> escaped, sonst bricht der HTML-Parser. */
   var PAYLOADS={
     "XSS":[
       {name:"Basic alert",        val:"<script>alert(1)<\/script>"},
